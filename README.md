@@ -152,10 +152,10 @@ pip install -r requirements.txt
 ### 4. Configuration (Optional)
 Copy `.env.example` to `.env` to customize settings:
 ```bash
-# For local development:
+# For local development
 BASE_URL=http://localhost:8000
 
-# For deployed service:
+# For deployed service
 # BASE_URL=https://<your-render-service>.onrender.com
 ```
 
