@@ -7,6 +7,12 @@
 
 CertiFlow is a lightweight backend API service built with FastAPI that generates PDF certificates in bulk from a predefined template, tracks generation progress asynchronously, isolates individual recipient failures, and provides QR-based certificate verification.
 
+### 🌐 Live Demo
+
+[**Open CertiFlow →**](https://certiflow-l10j.onrender.com)
+
+**API Documentation:** [Swagger UI](https://certiflow-l10j.onrender.com/docs)
+
 ---
 
 ## 🌟 Features
