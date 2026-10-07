@@ -3,37 +3,66 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bulk Certificate Generator — Dashboard</title>
+    <title>CertiFlow — Bulk Certificate Generator</title>
     <link rel="stylesheet" href="/static/style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
 <body>
+    <!-- Navbar -->
     <header class="navbar">
         <div class="nav-container">
-            <div class="logo">
-                <span class="logo-icon">📜</span>
-                <span class="logo-text">CertiFlow <span>Bulk Generator</span></span>
-            </div>
+            <a href="/" class="logo">
+                <div class="logo-badge">
+                    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                    </svg>
+                </div>
+                <div class="logo-text">CertiFlow <span>Bulk Generator</span></div>
+            </a>
             <div class="nav-links">
-                <a href="/docs" target="_blank" class="nav-link">📖 Swagger API Docs</a>
-                <a href="https://github.com" target="_blank" class="nav-link">⚡ GitHub</a>
-                <span class="badge badge-success">v1.0.0 Active</span>
+                <a href="/docs" target="_blank" class="nav-link">
+                    <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/>
+                    </svg>
+                    API Docs
+                </a>
+                <a href="https://github.com/Eternity2401/Bulk-Certificate-Generator" target="_blank" class="nav-link">
+                    <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
+                        <path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/>
+                    </svg>
+                    GitHub
+                </a>
+                <span class="status-pill">
+                    <span class="status-dot"></span>
+                    API Active
+                </span>
             </div>
         </div>
     </header>
 
+    <!-- Main Container -->
     <main class="main-container">
         <div class="hero-section">
-            <h1>Automated Bulk Certificate Generator</h1>
-            <p>Generate, issue, and verify high-quality PDF certificates in bulk with embedded QR verification.</p>
+            <span class="hero-tag">✨ Asynchronous Bulk Generation</span>
+            <h1>Issue & Verify <span class="gradient-text">PDF Certificates</span> in Bulk</h1>
+            <p>Generate hundreds of high-quality vector certificates with unique serial keys and embedded QR codes without blocking your workflow.</p>
         </div>
 
         <div class="dashboard-grid">
-            <!-- Left Card: Request Configuration -->
+            <!-- Left Column: Form Card -->
             <section class="card form-card">
                 <div class="card-header">
-                    <h2>1. Certificate Details</h2>
-                    <span class="card-subtitle">Configure the course metadata and recipient roster</span>
+                    <div class="card-header-left">
+                        <h2>
+                            <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="color: var(--primary);">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                            </svg>
+                            1. Generation Config
+                        </h2>
+                        <span class="card-subtitle">Set course details and recipient roster</span>
+                    </div>
                 </div>
 
                 <form id="certificate-form">
@@ -48,15 +77,38 @@
                     </div>
 
                     <div class="input-mode-tabs">
-                        <button type="button" class="tab-btn active" id="tab-manual" onclick="switchInputMode('manual')">Manual Entry</button>
-                        <button type="button" class="tab-btn" id="tab-csv" onclick="switchInputMode('csv')">CSV Import</button>
+                        <button type="button" class="tab-btn active" id="tab-manual" onclick="switchInputMode('manual')">
+                            <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
+                            </svg>
+                            Manual Entry
+                        </button>
+                        <button type="button" class="tab-btn" id="tab-csv" onclick="switchInputMode('csv')">
+                            <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                            </svg>
+                            CSV Import
+                        </button>
                     </div>
 
-                    <!-- Manual Recipient Table -->
+                    <!-- Manual Recipient Section -->
                     <div id="manual-recipients-section">
+                        <!-- Quick demo presets -->
+                        <div class="preset-toolbar">
+                            <span>Quick presets:</span>
+                            <div class="preset-actions">
+                                <button type="button" class="btn btn-secondary btn-sm" onclick="loadSampleDemoRecipients()">Demo (3)</button>
+                                <button type="button" class="btn btn-secondary btn-sm" onclick="loadFaultTestRecipients()">Mixed Fault Test</button>
+                                <button type="button" class="btn btn-secondary btn-sm" onclick="clearAllRecipients()">Clear</button>
+                            </div>
+                        </div>
+
                         <div class="table-header-row">
-                            <label>Recipients List (<span id="recipient-count">3</span>)</label>
-                            <button type="button" class="btn btn-secondary btn-sm" onclick="addRecipientRow()">+ Add Recipient</button>
+                            <label>
+                                Recipients Roster
+                                <span class="count-pill" id="recipient-count">3</span>
+                            </label>
+                            <button type="button" class="btn btn-secondary btn-sm" onclick="addRecipientRow()">+ Add Row</button>
                         </div>
                         <div class="recipients-table-container">
                             <table class="recipients-table" id="recipients-table">
@@ -64,24 +116,24 @@
                                     <tr>
                                         <th>Full Name *</th>
                                         <th>Email (Optional)</th>
-                                        <th style="width: 40px;"></th>
+                                        <th style="width: 36px;"></th>
                                     </tr>
                                 </thead>
                                 <tbody id="recipients-tbody">
                                     <tr>
                                         <td><input type="text" class="input-name" placeholder="John Doe" value="Alice Johnson" required></td>
                                         <td><input type="email" class="input-email" placeholder="alice@example.com" value="alice@example.com"></td>
-                                        <td><button type="button" class="btn-icon delete-btn" onclick="removeRecipientRow(this)">✕</button></td>
+                                        <td><button type="button" class="btn-icon delete-btn" onclick="removeRecipientRow(this)" title="Remove">✕</button></td>
                                     </tr>
                                     <tr>
                                         <td><input type="text" class="input-name" placeholder="John Doe" value="Bob Smith" required></td>
                                         <td><input type="email" class="input-email" placeholder="bob@example.com" value="bob@example.com"></td>
-                                        <td><button type="button" class="btn-icon delete-btn" onclick="removeRecipientRow(this)">✕</button></td>
+                                        <td><button type="button" class="btn-icon delete-btn" onclick="removeRecipientRow(this)" title="Remove">✕</button></td>
                                     </tr>
                                     <tr>
                                         <td><input type="text" class="input-name" placeholder="John Doe" value="Charlie Brown" required></td>
                                         <td><input type="email" class="input-email" placeholder="charlie@example.com" value="charlie@example.com"></td>
-                                        <td><button type="button" class="btn-icon delete-btn" onclick="removeRecipientRow(this)">✕</button></td>
+                                        <td><button type="button" class="btn-icon delete-btn" onclick="removeRecipientRow(this)" title="Remove">✕</button></td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -91,11 +143,22 @@
                     <!-- CSV Upload Section -->
                     <div id="csv-upload-section" class="hidden">
                         <div class="drop-zone" id="drop-zone">
-                            <span class="drop-icon">📁</span>
-                            <p><strong>Click to upload</strong> or drag and drop a CSV file</p>
-                            <span class="drop-hint">Format: name,email (Header optional)</span>
+                            <div class="drop-icon">
+                                <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                                </svg>
+                            </div>
+                            <p><strong>Click to upload</strong> or drag & drop CSV file</p>
+                            <span class="drop-hint">Format: <code>name,email</code> (Header optional)</span>
                             <input type="file" id="csv-file-input" accept=".csv" class="hidden">
                         </div>
+
+                        <div class="csv-actions-bar">
+                            <button type="button" class="btn btn-secondary btn-sm" onclick="downloadSampleCsvTemplate()">
+                                📥 Download Sample CSV
+                            </button>
+                        </div>
+
                         <div id="csv-preview-info" class="csv-preview-box hidden">
                             <span id="csv-filename">file.csv</span>
                             <span id="csv-rows-count" class="badge badge-info">0 recipients parsed</span>
@@ -111,24 +174,37 @@
                 </form>
             </section>
 
-            <!-- Right Card: Job Status & Progress Tracker -->
+            <!-- Right Column: Generation Monitor -->
             <section class="card status-card">
                 <div class="card-header">
-                    <h2>2. Generation Monitor</h2>
-                    <span class="card-subtitle">Real-time background status and batch download</span>
+                    <div class="card-header-left">
+                        <h2>
+                            <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="color: var(--primary);">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                            </svg>
+                            2. Live Job Monitor
+                        </h2>
+                        <span class="card-subtitle">Real-time status, counters, and batch downloads</span>
+                    </div>
                 </div>
 
+                <!-- Empty State -->
                 <div id="empty-state" class="empty-state">
-                    <span class="empty-icon">⏳</span>
-                    <h3>No Active Job</h3>
-                    <p>Submit the form on the left to initiate asynchronous certificate generation.</p>
+                    <div class="empty-icon">
+                        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                    </div>
+                    <h3>No Active Batch</h3>
+                    <p>Submit a certificate request to start real-time asynchronous generation.</p>
                 </div>
 
+                <!-- Active Job Details Container -->
                 <div id="job-details-container" class="hidden">
                     <div class="job-meta-header">
-                        <div>
-                            <span class="meta-label">Job ID:</span>
-                            <code id="job-id-display">--</code>
+                        <div class="job-id-box">
+                            <span style="color: var(--text-muted); font-size: 0.8rem;">Job:</span>
+                            <span class="job-id-code" id="job-id-display" onclick="copyJobId()" title="Click to copy Job ID">--</span>
                         </div>
                         <div>
                             <span id="job-status-badge" class="badge badge-pending">PENDING</span>
@@ -169,14 +245,19 @@
                     <!-- Batch Download Action -->
                     <div class="batch-actions">
                         <a id="download-zip-btn" href="#" class="btn btn-success btn-block disabled">
-                            📦 Download All Certificates (ZIP)
+                            <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                            </svg>
+                            Download All Certificates (ZIP)
                         </a>
                     </div>
 
-                    <!-- Itemized Results Table -->
+                    <!-- Itemized Results Table Header with Search Filter -->
                     <div class="results-header">
                         <h3>Recipient Breakdown</h3>
+                        <input type="text" id="results-filter-input" class="table-filter-input" placeholder="🔍 Filter list..." oninput="filterResultsTable()">
                     </div>
+
                     <div class="results-table-container">
                         <table class="results-table">
                             <thead>
@@ -197,8 +278,12 @@
         </div>
     </main>
 
+    <!-- Toast Container -->
+    <div id="toast-container"></div>
+
+    <!-- Footer -->
     <footer class="footer">
-        <p>CertiFlow — Bulk Certificate Generator Backend Service</p>
+        <p>CertiFlow — Automated Bulk Certificate Generation & Verification Engine</p>
     </footer>
 
     <script src="/static/app.js"></script>

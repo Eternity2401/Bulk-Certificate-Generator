@@ -1,7 +1,12 @@
-// Client-Side Logic for Bulk Certificate Generator
+// ==============================================================================
+// CertiFlow — Client-Side Application Logic
+// Handles form submission, CSV parsing, polling, presets, and UI interactions.
+// ==============================================================================
+
 let currentInputMode = 'manual';
 let parsedCsvRecipients = [];
 let pollingIntervalId = null;
+let currentJobItems = [];
 
 document.addEventListener('DOMContentLoaded', () => {
     setupCsvDropZone();
@@ -35,9 +40,9 @@ function addRecipientRow(name = '', email = '') {
     const tbody = document.getElementById('recipients-tbody');
     const tr = document.createElement('tr');
     tr.innerHTML = `
-        <td><input type="text" class="input-name" placeholder="John Doe" value="${escapeHtml(name)}" required></td>
-        <td><input type="email" class="input-email" placeholder="john@example.com" value="${escapeHtml(email)}"></td>
-        <td><button type="button" class="btn-icon delete-btn" onclick="removeRecipientRow(this)">✕</button></td>
+        <td><input type="text" class="input-name" placeholder="Full Name" value="${escapeHtml(name)}" required></td>
+        <td><input type="email" class="input-email" placeholder="email@example.com" value="${escapeHtml(email)}"></td>
+        <td><button type="button" class="btn-icon delete-btn" onclick="removeRecipientRow(this)" title="Remove">✕</button></td>
     `;
     tbody.appendChild(tr);
     updateRecipientCount();
@@ -49,7 +54,7 @@ function removeRecipientRow(btn) {
         btn.closest('tr').remove();
         updateRecipientCount();
     } else {
-        alert('You must have at least one recipient row.');
+        showToast('At least one recipient row is required.', 'warning');
     }
 }
 
@@ -59,6 +64,52 @@ function updateRecipientCount() {
     if (countSpan && tbody) {
         countSpan.textContent = tbody.children.length;
     }
+}
+
+// Quick Presets
+function loadSampleDemoRecipients() {
+    const tbody = document.getElementById('recipients-tbody');
+    tbody.innerHTML = '';
+    const samples = [
+        { name: 'Alice Johnson', email: 'alice.johnson@example.com' },
+        { name: 'Bob Smith', email: 'bob.smith@example.com' },
+        { name: 'Charlie Brown', email: 'charlie.brown@example.com' }
+    ];
+    samples.forEach(s => addRecipientRow(s.name, s.email));
+    showToast('Loaded 3 demo participants.');
+}
+
+function loadFaultTestRecipients() {
+    const tbody = document.getElementById('recipients-tbody');
+    tbody.innerHTML = '';
+    const samples = [
+        { name: 'Sarah Connor', email: 'sarah@example.com' },
+        { name: 'John Connor', email: 'john@example.com' },
+        { name: 'Kyle Reese', email: 'kyle@example.com' }
+    ];
+    samples.forEach(s => addRecipientRow(s.name, s.email));
+    showToast('Loaded mixed test batch.');
+}
+
+function clearAllRecipients() {
+    const tbody = document.getElementById('recipients-tbody');
+    tbody.innerHTML = '';
+    addRecipientRow('', '');
+    showToast('Roster cleared.');
+}
+
+// Download Sample CSV directly from browser
+function downloadSampleCsvTemplate() {
+    const csvContent = 'name,email\nAlice Johnson,alice@example.com\nBob Smith,bob@example.com\nCharlie Brown,charlie@example.com\n';
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'sample_recipients.csv');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    showToast('Sample CSV template downloaded!');
 }
 
 // CSV Drag & Drop and File Parsing
@@ -73,15 +124,18 @@ function setupCsvDropZone() {
     dropZone.addEventListener('dragover', (e) => {
         e.preventDefault();
         dropZone.style.borderColor = 'var(--primary)';
+        dropZone.style.background = 'var(--primary-soft)';
     });
 
     dropZone.addEventListener('dragleave', () => {
-        dropZone.style.borderColor = 'var(--border)';
+        dropZone.style.borderColor = 'var(--border-subtle)';
+        dropZone.style.background = '#fafafa';
     });
 
     dropZone.addEventListener('drop', (e) => {
         e.preventDefault();
-        dropZone.style.borderColor = 'var(--border)';
+        dropZone.style.borderColor = 'var(--border-subtle)';
+        dropZone.style.background = '#fafafa';
         if (e.dataTransfer.files.length > 0) {
             handleCsvFile(e.dataTransfer.files[0]);
         }
@@ -96,7 +150,7 @@ function setupCsvDropZone() {
 
 function handleCsvFile(file) {
     if (!file.name.endsWith('.csv')) {
-        alert('Please upload a valid CSV file.');
+        showToast('Please upload a valid .csv file', 'warning');
         return;
     }
 
@@ -104,7 +158,7 @@ function handleCsvFile(file) {
     reader.onload = (e) => {
         const text = e.target.result;
         parsedCsvRecipients = parseCsv(text);
-        
+
         const previewBox = document.getElementById('csv-preview-info');
         const filenameSpan = document.getElementById('csv-filename');
         const countBadge = document.getElementById('csv-rows-count');
@@ -112,6 +166,7 @@ function handleCsvFile(file) {
         filenameSpan.textContent = file.name;
         countBadge.textContent = `${parsedCsvRecipients.length} recipients parsed`;
         previewBox.classList.remove('hidden');
+        showToast(`Parsed ${parsedCsvRecipients.length} recipients from CSV!`);
     };
     reader.readAsText(file);
 }
@@ -124,7 +179,7 @@ function parseCsv(csvText) {
         const parts = lines[i].split(',').map(p => p.trim());
         if (parts.length === 0 || !parts[0]) continue;
 
-        // Skip header if present
+        // Skip header row if present
         if (i === 0 && parts[0].toLowerCase() === 'name') continue;
 
         const name = parts[0];
@@ -136,7 +191,7 @@ function parseCsv(csvText) {
     return recipients;
 }
 
-// Form Submission & API Request
+// Form Submission & API Call
 function setupFormSubmit() {
     const form = document.getElementById('certificate-form');
     if (!form) return;
@@ -164,7 +219,7 @@ function setupFormSubmit() {
         }
 
         if (recipients.length === 0) {
-            alert('Please add at least one valid recipient.');
+            showToast('Please add at least one recipient.', 'warning');
             return;
         }
 
@@ -174,7 +229,6 @@ function setupFormSubmit() {
             recipients: recipients
         };
 
-        // UI Loading State
         setSubmitting(true);
 
         try {
@@ -190,10 +244,11 @@ function setupFormSubmit() {
             }
 
             const data = await response.json();
+            showToast('Generation job scheduled!');
             startMonitoringJob(data.job_id);
 
         } catch (err) {
-            alert('Error: ' + err.message);
+            showToast('Error: ' + err.message, 'danger');
         } finally {
             setSubmitting(false);
         }
@@ -207,7 +262,7 @@ function setSubmitting(isSubmitting) {
 
     if (isSubmitting) {
         submitBtn.disabled = true;
-        submitText.textContent = 'Scheduling Job...';
+        submitText.textContent = 'Enqueuing Batch...';
         spinner.classList.remove('hidden');
     } else {
         submitBtn.disabled = false;
@@ -224,7 +279,6 @@ function startMonitoringJob(jobId) {
     document.getElementById('job-details-container').classList.remove('hidden');
     document.getElementById('job-id-display').textContent = jobId;
 
-    // Reset progress
     updateProgressUI({
         status: 'PENDING',
         progress_percentage: 0,
@@ -235,7 +289,6 @@ function startMonitoringJob(jobId) {
         items: []
     });
 
-    // Immediate fetch + interval polling every 700ms
     pollJobStatus(jobId);
     pollingIntervalId = setInterval(() => pollJobStatus(jobId), 700);
 }
@@ -246,12 +299,18 @@ async function pollJobStatus(jobId) {
         if (!res.ok) return;
 
         const data = await res.json();
+        currentJobItems = data.items || [];
         updateProgressUI(data);
 
-        // Stop polling when completed or failed
+        // Stop polling when batch is finalized
         if (['COMPLETED', 'COMPLETED_WITH_ERRORS', 'FAILED'].includes(data.status)) {
             clearInterval(pollingIntervalId);
             pollingIntervalId = null;
+            if (data.status === 'COMPLETED') {
+                showToast('All certificates generated successfully! 🎉', 'success');
+            } else if (data.status === 'COMPLETED_WITH_ERRORS') {
+                showToast('Batch completed with some item errors.', 'warning');
+            }
         }
     } catch (e) {
         console.error('Polling error:', e);
@@ -290,38 +349,91 @@ function updateProgressUI(data) {
         zipBtn.classList.add('disabled');
     }
 
-    // 5. Itemized Table
+    // 5. Render Items Table
+    renderItemsTable(currentJobItems);
+}
+
+function renderItemsTable(items) {
     const tbody = document.getElementById('results-tbody');
+    const filterTerm = (document.getElementById('results-filter-input')?.value || '').toLowerCase().trim();
     tbody.innerHTML = '';
 
-    if (data.items && data.items.length > 0) {
-        data.items.forEach(item => {
-            const tr = document.createElement('tr');
-            
-            let actionHtml = '-';
-            if (item.status === 'COMPLETED' && item.download_url) {
-                actionHtml = `
-                    <div style="display: flex; gap: 0.35rem;">
-                        <a href="${item.download_url}" class="btn btn-secondary btn-sm" target="_blank">📥 PDF</a>
-                        <a href="/api/v1/certificates/verify/${item.certificate_id}" class="btn btn-secondary btn-sm" target="_blank">🔍 Verify</a>
-                    </div>
-                `;
-            } else if (item.status === 'FAILED') {
-                actionHtml = `<span class="text-danger" title="${escapeHtml(item.error_message || '')}">Failed ⚠️</span>`;
-            }
+    if (!items || items.length === 0) return;
 
-            tr.innerHTML = `
-                <td>
-                    <strong>${escapeHtml(item.recipient_name)}</strong>
-                    ${item.recipient_email ? `<br><small class="text-muted">${escapeHtml(item.recipient_email)}</small>` : ''}
-                </td>
-                <td><code class="font-mono">${escapeHtml(item.certificate_id)}</code></td>
-                <td><span class="badge ${getBadgeClass(item.status)}">${item.status}</span></td>
-                <td>${actionHtml}</td>
+    const filtered = items.filter(item => {
+        if (!filterTerm) return true;
+        return (item.recipient_name || '').toLowerCase().includes(filterTerm) ||
+               (item.certificate_id || '').toLowerCase().includes(filterTerm);
+    });
+
+    filtered.forEach(item => {
+        const tr = document.createElement('tr');
+
+        let actionHtml = '-';
+        if (item.status === 'COMPLETED' && item.download_url) {
+            actionHtml = `
+                <div style="display: flex; gap: 0.35rem;">
+                    <a href="${item.download_url}" class="btn btn-secondary btn-sm" target="_blank" title="Download PDF">📥 PDF</a>
+                    <a href="/api/v1/certificates/verify/${item.certificate_id}" class="btn btn-secondary btn-sm" target="_blank" title="Verify Online">🔍 Verify</a>
+                </div>
             `;
-            tbody.appendChild(tr);
-        });
+        } else if (item.status === 'FAILED') {
+            actionHtml = `<span class="badge badge-failed" title="${escapeHtml(item.error_message || '')}">Failed ⚠️</span>`;
+        } else {
+            actionHtml = `<span class="badge badge-processing">Processing...</span>`;
+        }
+
+        tr.innerHTML = `
+            <td>
+                <strong>${escapeHtml(item.recipient_name)}</strong>
+                ${item.recipient_email ? `<br><small style="color: var(--text-muted);">${escapeHtml(item.recipient_email)}</small>` : ''}
+            </td>
+            <td><code class="font-mono" onclick="copyText('${escapeHtml(item.certificate_id)}')" style="cursor: pointer;" title="Click to copy">${escapeHtml(item.certificate_id)}</code></td>
+            <td><span class="badge ${getBadgeClass(item.status)}">${item.status}</span></td>
+            <td>${actionHtml}</td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+function filterResultsTable() {
+    renderItemsTable(currentJobItems);
+}
+
+function copyJobId() {
+    const jobId = document.getElementById('job-id-display').textContent;
+    if (jobId && jobId !== '--') {
+        copyText(jobId);
     }
+}
+
+function copyText(text) {
+    navigator.clipboard.writeText(text).then(() => {
+        showToast(`Copied: ${text}`);
+    }).catch(() => {
+        showToast('Failed to copy', 'warning');
+    });
+}
+
+function showToast(message, type = 'info') {
+    const container = document.getElementById('toast-container');
+    if (!container) return;
+
+    const toast = document.createElement('div');
+    toast.className = 'toast';
+    toast.textContent = message;
+
+    if (type === 'success') toast.style.borderLeft = '3px solid var(--success)';
+    else if (type === 'warning') toast.style.borderLeft = '3px solid var(--warning)';
+    else if (type === 'danger') toast.style.borderLeft = '3px solid var(--danger)';
+    else toast.style.borderLeft = '3px solid var(--primary)';
+
+    container.appendChild(toast);
+    setTimeout(() => toast.classList.add('show'), 10);
+    setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => toast.remove(), 250);
+    }, 2800);
 }
 
 function getBadgeClass(status) {
