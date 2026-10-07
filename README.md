@@ -1,30 +1,42 @@
-# 📜 Bulk Certificate Generator Backend API
+# CertiFlow — Bulk Certificate Generator API
 
 [![CI Pipeline](https://github.com/username/bulk-certificate-generator/actions/workflows/ci.yml/badge.svg)](https://github.com)
 [![Python Version](https://img.shields.io/badge/Python-3.11+-blue.svg)](https://python.org)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.110+-009688.svg)](https://fastapi.tiangolo.com)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-A production-quality, lightweight, and interview-ready **Bulk Certificate Generator Backend API** built with **FastAPI**, **SQLAlchemy 2.0**, **SQLite**, and **ReportLab**.
-
-The system enables organizations to submit bulk certificate generation requests for hundreds of recipients, validates input data, asynchronously renders vector PDF certificates with embedded QR codes, tracks real-time progress, handles individual failures without stopping the batch, and provides single & batch ZIP downloads.
+CertiFlow is a high-performance, lightweight backend API service designed for automated, bulk PDF certificate generation with real-time job progress tracking, fault-tolerant batch processing, and embedded cryptographic QR code verification.
 
 ---
 
 ## 🌟 Key Features
 
-- **🚀 High-Speed Bulk Generation**: Accepts hundreds of recipients in a single request and returns an immediate `202 Accepted` job receipt.
-- **⚡ Asynchronous Background Processing**: Uses non-blocking background workers (`FastAPI BackgroundTasks`) with atomic database state tracking.
-- **🛡️ Isolated Fault Tolerance**: If 1 recipient record fails (e.g. malformed data), all other valid certificates are generated successfully. The job finishes with status `COMPLETED_WITH_ERRORS` and logs the exact failure reason per item.
-- **📄 Vector PDF Engine**: Custom ReportLab engine producing crisp landscape certificates with gold ornate borders and elegant typography in milliseconds without heavy headless browser binaries.
-- **🔍 Public QR Code Verification**: Every certificate embeds a unique verification code and QR code linking directly to `/api/v1/certificates/verify/{certificate_id}`.
-- **📦 Batch ZIP Retrieval**: Download all successfully generated certificates in a single compressed ZIP archive with one click.
-- **🎨 Interactive Web Dashboard**: Built-in, responsive Jinja2/Vanilla JS frontend with drag-and-drop CSV import, live polling progress bar, and verification portal.
-- **☁️ 100% Free Cloud Deployment**: Fully configured for **Render's Free Web Service** with zero external paid dependencies or API keys.
+- **🚀 Bulk Generation**: Accepts hundreds of recipient records in a single API payload and returns an immediate `202 Accepted` job handle.
+- **⚡ Asynchronous Processing**: Leverages non-blocking background workers (`FastAPI BackgroundTasks`) with atomic database state tracking.
+- **🛡️ Isolated Fault Tolerance**: Individual recipient validation or generation errors do not abort the batch. Valid certificates generate smoothly, while failed items record detailed error logs.
+- **📄 Native Vector PDF Engine**: Custom ReportLab layout producing crisp, lightweight landscape certificates with gold and navy ornate borders and typography.
+- **🔍 Public QR Code Verification**: Every certificate embeds a unique verification code and QR code linking directly to a public verification portal.
+- **📦 Batch ZIP Retrieval**: Allows instant streaming of all successfully generated certificates in a single compressed ZIP archive.
+- **🎨 Interactive Web Dashboard**: Built-in Jinja2/Vanilla JS interface featuring CSV file import, live polling progress bar, and instant download buttons.
+- **☁️ Cloud-Ready & Containerized**: Ready for containerized deployment via Docker or zero-cost deployment on Render Free Web Service.
 
 ---
 
-## 🏗️ System Architecture
+## 🛠️ Technology Stack
+
+- **Language**: Python 3.11+
+- **Web Framework**: FastAPI (Async, OpenAPI/Swagger autodocs)
+- **Data Validation**: Pydantic v2
+- **ORM & Database**: SQLAlchemy 2.0 with SQLite (PostgreSQL compatible)
+- **PDF Generation**: ReportLab
+- **QR Code Engine**: qrcode + Pillow
+- **Frontend / Templates**: Jinja2 + Vanilla HTML5/CSS3/JavaScript (Fetch API polling)
+- **Testing**: Pytest + HTTPX
+- **Deployment**: Docker, Render Blueprint (`render.yaml`), GitHub Actions CI
+
+---
+
+## 🏗️ Architecture & Processing Flow
 
 ```mermaid
 flowchart TD
@@ -69,105 +81,117 @@ flowchart TD
     UI -->|GET /jobs/{id}/download-all ZIP| Router
 ```
 
+### Processing Workflow:
+1. **Request Ingestion**: The client sends a `POST /api/v1/certificates/generate` request containing course details, issue date, and an array of recipient objects.
+2. **Persistence & Acceptance**: A `Job` record and associated `CertificateItem` records are created in SQLite with `PENDING` status. An immediate `202 Accepted` response with the `job_id` is returned.
+3. **Background Execution**: FastAPI `BackgroundTasks` executes the job orchestrator (`process_certificate_job`).
+4. **Isolated Rendering**: Each recipient's vector PDF is rendered independently. An embedded QR code pointing to `/api/v1/certificates/verify/{certificate_id}` is generated using the configured `BASE_URL`.
+5. **State Aggregation**: Upon completion of all items, the job status transitions to `COMPLETED` (if all succeeded) or `COMPLETED_WITH_ERRORS` (if any items encountered an error).
+
 ---
 
-## 🗄️ Database Design (Strictly 2 Tables)
+## 🗄️ Database Design
 
-The schema is intentionally kept minimal, relational, and easy to explain:
+The database schema consists of two normalized tables:
 
 ### 1. `jobs` Table
-Tracks the overarching batch request metadata and completion counters.
-- `id` (String UUID, PK)
-- `course_name` (String)
-- `issue_date` (String)
-- `status` (`PENDING` | `PROCESSING` | `COMPLETED` | `COMPLETED_WITH_ERRORS` | `FAILED`)
-- `total_count` (Integer)
-- `success_count` (Integer)
-- `failed_count` (Integer)
-- `created_at` (DateTime)
+Tracks overarching batch requests and aggregate metrics:
+- `id` (String UUID, Primary Key)
+- `course_name` (String, Non-nullable)
+- `issue_date` (String, Non-nullable)
+- `status` (Enum: `PENDING`, `PROCESSING`, `COMPLETED`, `COMPLETED_WITH_ERRORS`, `FAILED`)
+- `total_count` (Integer, Default: 0)
+- `success_count` (Integer, Default: 0)
+- `failed_count` (Integer, Default: 0)
+- `created_at` (DateTime, Default: UTC Now)
 - `completed_at` (DateTime, Nullable)
 
 ### 2. `certificate_items` Table
-Tracks individual recipient certificate items, file paths, and failure logs.
-- `id` (String UUID, PK)
-- `job_id` (String UUID, FK -> `jobs.id`)
-- `certificate_id` (String, Unique e.g. `CERT-AB12-CD34`)
-- `recipient_name` (String)
+Tracks individual recipient certificate records:
+- `id` (String UUID, Primary Key)
+- `job_id` (String UUID, Foreign Key $\rightarrow$ `jobs.id`)
+- `certificate_id` (String, Unique Index, e.g., `CERT-AB12-CD34`)
+- `recipient_name` (String, Non-nullable)
 - `recipient_email` (String, Nullable)
-- `status` (`PENDING` | `PROCESSING` | `COMPLETED` | `FAILED`)
-- `file_path` (String, Nullable)
-- `error_message` (Text, Nullable)
-- `created_at` (DateTime)
+- `status` (Enum: `PENDING`, `PROCESSING`, `COMPLETED`, `FAILED`)
+- `file_path` (String, Nullable, Local relative path)
+- `error_message` (Text, Nullable, Failure reason)
+- `created_at` (DateTime, Default: UTC Now)
 
 ---
 
-## 📂 Project Structure
+## 📂 Project Directory Structure
 
 ```
 bulk-certificate-generator/
 ├── app/
 │   ├── __init__.py
-│   ├── main.py                     # App factory, CORS, static & template mounts
-│   ├── config.py                   # App settings (BASE_URL, STORAGE_DIR)
+│   ├── main.py                     # Application factory, middleware & routing
+│   ├── config.py                   # Environment configuration (Pydantic Settings)
 │   ├── api/
 │   │   ├── __init__.py
-│   │   └── routes.py               # REST API endpoints & HTML page routes
+│   │   └── routes.py               # REST API endpoints & HTML template routes
 │   ├── db/
 │   │   ├── __init__.py
-│   │   ├── database.py             # SQLite engine, SessionLocal, get_db dependency
-│   │   └── models.py               # Job and CertificateItem SQLAlchemy models + Enums
+│   │   ├── database.py             # SQLAlchemy engine & session dependency
+│   │   └── models.py               # ORM models and state Enums
 │   ├── schemas/
 │   │   ├── __init__.py
-│   │   └── certificate.py          # Pydantic models for request, response, items
+│   │   └── certificate.py          # Pydantic v2 request & response models
 │   ├── services/
 │   │   ├── __init__.py
-│   │   ├── certificate_service.py  # Background job runner & status coordinator
-│   │   ├── pdf_service.py          # ReportLab certificate template engine
-│   │   └── qr_service.py           # QR code generation with verification URL
+│   │   ├── certificate_service.py  # Background job orchestrator & error isolator
+│   │   ├── pdf_service.py          # ReportLab PDF template renderer
+│   │   └── qr_service.py           # In-memory QR code generator
 │   ├── templates/
-│   │   ├── dashboard.html          # Clean Jinja2 web UI for generator demo
-│   │   └── verify.html             # Public certificate verification web page
+│   │   ├── dashboard.html          # Interactive Web UI template
+│   │   └── verify.html             # Public certificate verification template
 │   └── static/
-│       ├── style.css               # Modern, clean CSS
-│       └── app.js                  # Vanilla JS for CSV parse, API fetch, progress polling
-├── certificates/                   # Directory where generated PDFs/ZIPs are stored
+│       ├── style.css               # Clean, responsive CSS stylesheet
+│       └── app.js                  # Vanilla JS frontend logic & polling handler
+├── certificates/                   # Storage directory for generated PDF files
 │   └── .gitkeep
 ├── sample_data/
-│   ├── sample_recipients.csv       # Ready-to-test CSV file
-│   └── sample_request.json         # Ready-to-test JSON payload
+│   ├── sample_recipients.csv       # Sample CSV recipient roster
+│   └── sample_request.json         # Sample JSON generation payload
 ├── tests/
 │   ├── __init__.py
-│   ├── conftest.py                 # In-memory SQLite DB fixture & HTTPX TestClient
-│   ├── test_api.py                 # Endpoints: generate, status, download, zip, verify
-│   ├── test_generation.py          # PDF & QR generation isolated tests
-│   └── test_validation.py          # Pydantic input validation & error tests
+│   ├── conftest.py                 # Pytest fixtures & isolated test client
+│   ├── test_api.py                 # E2E API and integration test suite
+│   ├── test_generation.py          # PDF and QR generation unit tests
+│   └── test_validation.py          # Pydantic schema validation tests
 ├── .github/
 │   └── workflows/
-│       └── ci.yml                  # GitHub Actions pytest runner
-├── Dockerfile                      # Single-stage Dockerfile
-├── render.yaml                     # 1-Click Render Free Deployment Blueprint
-├── requirements.txt                # Locked dependencies
-├── .gitignore                      # Ignore *.db, __pycache__, certificates/
-└── README.md                       # Documentation & Interview Guide
+│       └── ci.yml                  # GitHub Actions automated test workflow
+├── .env.example                    # Environment variable template
+├── .gitignore                      # Git ignore patterns
+├── Dockerfile                      # Production container image definition
+├── pytest.ini                      # Pytest configuration
+├── render.yaml                     # Render Free Web Service deployment blueprint
+├── requirements.txt                # Production and test dependencies
+├── run.py                          # Cross-platform application entrypoint
+├── start.bat                       # Windows 1-click startup script
+├── test.bat                        # Windows 1-click test script
+└── README.md                       # Project documentation
 ```
 
 ---
 
-## 🚀 Quickstart & Local Setup
+## 🚀 Setup & Installation
 
 ### Prerequisites
-- Python 3.11+
+- Python 3.11 or higher
 - Git
 
-### 1. Clone the repository
+### 1. Clone the Repository
 ```bash
-git clone https://github.com/your-username/bulk-certificate-generator.git
+git clone https://github.com/username/bulk-certificate-generator.git
 cd bulk-certificate-generator
 ```
 
-### 2. Create and activate a virtual environment
+### 2. Create and Activate Virtual Environment
 ```bash
-# macOS/Linux
+# Linux / macOS
 python3 -m venv venv
 source venv/bin/activate
 
@@ -176,70 +200,76 @@ python -m venv venv
 .\venv\Scripts\Activate.ps1
 ```
 
-### 3. Install dependencies
+### 3. Install Dependencies
 ```bash
 pip install -r requirements.txt
 ```
 
-### 4. Run the application
+### 4. Configure Environment (Optional)
+To customize settings, create a `.env` file from the provided template:
 ```bash
-# Recommended (Universal runner - works from anywhere):
-python run.py
+# Linux / macOS
+cp .env.example .env
 
-# Or directly with Python module:
-python -m uvicorn app.main:app --reload --port 8000
-
-# On Windows: you can also simply double-click start.bat
+# Windows (CMD / PowerShell)
+copy .env.example .env
 ```
 
-- 🌐 **Web Dashboard**: Open [http://localhost:8000](http://localhost:8000)
-- 📖 **Interactive Swagger UI**: Open [http://localhost:8000/docs](http://localhost:8000/docs)
-- 🔍 **ReDoc Documentation**: Open [http://localhost:8000/redoc](http://localhost:8000/redoc)
+Configurable options in `.env`:
+- `BASE_URL`: Base URL used inside embedded QR verification links (e.g. `http://localhost:8000`, `http://192.168.1.9:8000`, or `https://my-app.onrender.com`).
+- `DATABASE_URL`: Database connection string (defaults to SQLite: `sqlite:///certificates.db`).
 
 ---
 
-## 🧪 Running Automated Tests
+## 💻 Running the Application
 
-Run the full automated test suite using `pytest`:
+### Option A: Using the Runner Script (Recommended)
+```bash
+python run.py
+```
+*(On Windows, you can also double-click `start.bat`)*
+
+### Option B: Using Uvicorn Directly
+```bash
+python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+```
+
+### Access URLs:
+- 🌐 **Interactive Dashboard**: `http://localhost:8000`
+- 📖 **Interactive Swagger Docs**: `http://localhost:8000/docs`
+- 🔍 **ReDoc Documentation**: `http://localhost:8000/redoc`
+
+---
+
+## 🧪 Automated Testing
+
+Execute the test suite using `pytest`:
 
 ```bash
-# Run tests using python module:
 python -m pytest
-
-# On Windows: you can also double-click test.bat
 ```
+*(On Windows, you can also double-click `test.bat`)*
 
-Expected output:
-```
-tests/test_api.py::test_create_and_process_job_e2e PASSED
-tests/test_api.py::test_individual_failure_isolation PASSED
-tests/test_api.py::test_non_existent_job_404 PASSED
-tests/test_api.py::test_non_existent_certificate_download_404 PASSED
-tests/test_api.py::test_non_existent_certificate_verify_404 PASSED
-tests/test_api.py::test_health_check PASSED
-tests/test_generation.py::test_qr_code_generation PASSED
-tests/test_generation.py::test_pdf_generation_creates_valid_file PASSED
-tests/test_generation.py::test_sanitize_filename PASSED
-tests/test_validation.py::test_empty_request_body PASSED
-tests/test_validation.py::test_missing_course_name PASSED
-tests/test_validation.py::test_missing_issue_date PASSED
-tests/test_validation.py::test_empty_recipients_list PASSED
-tests/test_validation.py::test_empty_recipient_name PASSED
-tests/test_validation.py::test_invalid_recipient_email_format PASSED
-tests/test_validation.py::test_valid_request_without_email PASSED
-
-======================== 16 passed in 0.55s ========================
-```
+### Test Coverage Highlights:
+- Request validation (empty payload, missing fields, malformed email)
+- Asynchronous job execution and database status transitions
+- Isolated per-recipient error handling
+- ReportLab vector PDF rendering and header verification
+- Dynamic QR code generation with custom `BASE_URL`
+- Single certificate PDF download (`application/pdf`)
+- Batch compressed ZIP download (`application/zip`)
+- Certificate verification endpoint (JSON and HTML)
+- Missing resource handling (HTTP 404)
 
 ---
 
 ## 📡 REST API Reference
 
-### 1. Submit Bulk Certificate Generation Request
+### 1. Submit Generation Request
 - **Endpoint**: `POST /api/v1/certificates/generate`
 - **Status**: `202 Accepted`
 
-#### Request Body:
+#### Request:
 ```json
 {
   "course_name": "Full Stack & Cloud Architecture",
@@ -261,16 +291,9 @@ tests/test_validation.py::test_valid_request_without_email PASSED
 }
 ```
 
-#### cURL Example:
-```bash
-curl -X POST http://localhost:8000/api/v1/certificates/generate \
-  -H "Content-Type: application/json" \
-  -d @sample_data/sample_request.json
-```
-
 ---
 
-### 2. Poll Job Status & Item Breakdown
+### 2. Query Job Progress & Results
 - **Endpoint**: `GET /api/v1/certificates/jobs/{job_id}`
 - **Status**: `200 OK`
 
@@ -286,8 +309,8 @@ curl -X POST http://localhost:8000/api/v1/certificates/generate \
   "failed": 0,
   "pending": 0,
   "progress_percentage": 100.0,
-  "created_at": "2026-10-07T08:00:00",
-  "completed_at": "2026-10-07T08:00:02",
+  "created_at": "2026-10-07T12:00:00",
+  "completed_at": "2026-10-07T12:00:02",
   "download_all_url": "/api/v1/certificates/jobs/7f8b9e6c-31a2-4c9f-8d2b-1a9e8f7c6d5e/download-all",
   "items": [
     {
@@ -298,7 +321,7 @@ curl -X POST http://localhost:8000/api/v1/certificates/generate \
       "status": "COMPLETED",
       "download_url": "/api/v1/certificates/e3a89e1a-5b12-4c11-912a-3c5e8f7d9a1b/download",
       "error_message": null,
-      "created_at": "2026-10-07T08:00:00"
+      "created_at": "2026-10-07T12:00:00"
     }
   ]
 }
@@ -316,7 +339,7 @@ curl -O -J http://localhost:8000/api/v1/certificates/{item_id}/download
 
 ---
 
-### 4. Download All Certificates as a ZIP
+### 4. Download Batch ZIP Archive
 - **Endpoint**: `GET /api/v1/certificates/jobs/{job_id}/download-all`
 - **Status**: `200 OK` (`Content-Type: application/zip`)
 
@@ -330,8 +353,8 @@ curl -O -J http://localhost:8000/api/v1/certificates/jobs/{job_id}/download-all
 - **Endpoint**: `GET /api/v1/certificates/verify/{certificate_id}`
 - **Status**: `200 OK`
 
-- When accessed via **Browser / QR code scan**: Renders an authentic Certificate Verification Badge HTML page.
-- When accessed via **JSON client / API**: Returns verification payload:
+- **Web Browser / QR Scan**: Displays the official HTML Verification Badge page.
+- **API Clients**: Returns JSON verification payload:
 
 ```json
 {
@@ -340,70 +363,72 @@ curl -O -J http://localhost:8000/api/v1/certificates/jobs/{job_id}/download-all
   "course_name": "Full Stack & Cloud Architecture",
   "issue_date": "October 7, 2026",
   "status": "VALID",
-  "issued_at": "2026-10-07T08:00:00",
+  "issued_at": "2026-10-07T12:00:00",
   "download_url": "/api/v1/certificates/e3a89e1a-5b12-4c11-912a-3c5e8f7d9a1b/download"
 }
 ```
 
 ---
 
-## 🎯 Key Design Decisions & Interview Talking Points
+## 🛡️ Error Handling & Fault Isolation
 
-During an interview, you may be asked to justify architectural choices:
-
-### 1. Why FastAPI `BackgroundTasks` instead of Celery + Redis?
-> **Answer**: For this application's scope, FastAPI `BackgroundTasks` provides true asynchronous, non-blocking execution with zero external infrastructure overhead (no Redis server, no RabbitMQ broker, no extra worker process daemon). Because all database state updates are transactionally committed to SQLite, client requests are never blocked.  
-> Furthermore, because our service layer (`process_certificate_job`) is cleanly decoupled from HTTP routes, scaling to a distributed multi-worker cluster (Celery/Redis/RQ) only requires changing the task invocation without touching any certificate generation or database logic.
-
-### 2. Why ReportLab over Headless Browser HTML-to-PDF (Puppeteer/WeasyPrint)?
-> **Answer**: ReportLab renders native vector PDFs directly in Python memory in single-digit milliseconds. Headless browsers require launching heavy Chromium binaries (~300MB RAM per process), often fail or timeout in lightweight serverless/container environments, and introduce font-rendering inconsistencies. ReportLab creates sharp, lightweight, highly reproducible PDF files with minimal CPU and memory footprint.
-
-### 3. How is Partial Failure Handled?
-> **Answer**: Inside `process_certificate_job`, each recipient generation is wrapped in an isolated `try-except` block. An individual failure (e.g. invalid name or filesystem error) sets only that item's status to `FAILED` and logs `error_message`, while all remaining valid items continue processing. If at least 1 item succeeded and 1 failed, the overarching job is marked `COMPLETED_WITH_ERRORS`, giving clients complete visibility into what succeeded and what failed.
-
-### 4. Why SQLite?
-> **Answer**: SQLite requires zero setup, zero network roundtrips, and stores data in a single file, making it ideal for evaluation, local testing, and free-tier cloud containers. Thanks to SQLAlchemy 2.0 ORM abstraction, switching to PostgreSQL in enterprise production is as simple as updating the `DATABASE_URL` environment variable.
+- **Request Validation**: Handled by Pydantic v2 before entering the database. Missing required fields or malformed formats trigger immediate HTTP 422 responses.
+- **Recipient Error Isolation**: During background batch generation, each recipient item is processed within an isolated `try-except` block. A failure in one item (e.g. disk write failure or corrupted characters) is logged to `error_message`, and the item is marked `FAILED`. All other valid items continue processing.
+- **Job Status Differentiation**:
+  - `COMPLETED`: 100% of recipients generated successfully.
+  - `COMPLETED_WITH_ERRORS`: Partial success (at least one succeeded, at least one failed).
+  - `FAILED`: All items in the batch encountered fatal errors.
 
 ---
 
-## ☁️ Free Cloud Deployment Guide (Render)
+## ⚙️ Technical Design Decisions
 
-This application is 100% ready to deploy on **Render's Free Web Service** with zero billing account or credit card required:
+1. **FastAPI BackgroundTasks vs Distributed Brokers**:
+   FastAPI `BackgroundTasks` was selected to provide non-blocking asynchronous execution without requiring external dependencies (Redis, RabbitMQ). Because the orchestrator logic (`process_certificate_job`) is decoupled in a dedicated service layer, scaling to Celery/Redis for multi-node distributed clusters requires only adjusting the task dispatcher.
+2. **ReportLab Native Vector Generation**:
+   Using ReportLab generates native vector PDFs directly in memory in single-digit milliseconds per file, avoiding the high memory overhead (~300MB RAM per worker) and binary dependencies of headless browser rendering engines.
+3. **Database Architecture**:
+   SQLite with SQLAlchemy 2.0 ORM provides zero-configuration local and containerized execution while maintaining complete schema portability for PostgreSQL via `DATABASE_URL`.
 
-### Option A: 1-Click / Git Push Deploy (Recommended)
-1. Push this repository to your **GitHub** account.
-2. Sign up / Log in to [Render](https://render.com) (Free account).
-3. Click **New +** -> **Web Service**.
-4. Connect your GitHub repository.
-5. Configure the service:
+---
+
+## ☁️ Deployment Guide
+
+### Deploying to Render Free Web Service
+
+1. Push this repository to GitHub.
+2. In [Render](https://render.com), create a new **Web Service** and connect your repository.
+3. Configure the build and start settings:
    - **Environment**: `Python 3`
    - **Build Command**: `pip install -r requirements.txt`
    - **Start Command**: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
    - **Plan**: `Free`
-6. Add Environment Variable:
-   - `BASE_URL`: `https://<your-render-subdomain>.onrender.com` (for QR code verification links)
-7. Click **Create Web Service**. Your live backend & dashboard will be accessible publicly in ~2 minutes!
+4. Add Environment Variable:
+   - `BASE_URL`: `https://<your-service-name>.onrender.com`
+5. Click **Create Web Service**.
 
-> [!NOTE]
-> **Free Hosting Considerations**: Render's free tier spins down after 15 minutes of inactivity (taking ~30s on first wakeup) and uses an ephemeral filesystem (files reset on restarts). The application is designed so real-time generation and downloads happen instantly within active sessions.
+> **Note on Free Tier Storage**: Render Free Web Services operate on ephemeral storage. Generated PDF files and SQLite records persist throughout active runtime sessions but reset when the instance restarts.
+
+### Deploying with Docker
+
+```bash
+# Build Docker image
+docker build -t certiflow .
+
+# Run Docker container
+docker run -d -p 8000:8000 --name certiflow-app certiflow
+```
 
 ---
 
-## 🐳 Docker Deployment
+## 🔮 Limitations & Future Scope
 
-To run locally or deploy using Docker:
-
-```bash
-# Build the Docker container
-docker build -t bulk-certificate-generator .
-
-# Run the container
-docker run -p 8000:8000 bulk-certificate-generator
-```
-
-Open [http://localhost:8000](http://localhost:8000) in your browser.
+- **Template Selection**: Currently uses one standardized landscape certificate design. Future iterations could support customizable template stylesheets.
+- **Distributed Queues**: For extremely large batches ($10,000+$ recipients), migrating from in-process background tasks to a Redis/Celery queue with persistent worker nodes would provide horizontal scale.
+- **Cloud Object Storage**: Storing generated PDF files in Amazon S3 or Google Cloud Storage would enable persistent storage across stateless serverless instances.
 
 ---
 
 ## 📄 License
-This project is licensed under the MIT License — feel free to use, modify, and distribute it for academic and professional evaluation.
+
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
