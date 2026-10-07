@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bulk Certificate Generator — Dashboard</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header class="navbar">
+        <div class="nav-container">
+            <div class="logo">
+                <span class="logo-icon">📜</span>
+                <span class="logo-text">CertiFlow <span>Bulk Generator</span></span>
+            </div>
+            <div class="nav-links">
+                <a href="/docs" target="_blank" class="nav-link">📖 Swagger API Docs</a>
+                <a href="https://github.com" target="_blank" class="nav-link">⚡ GitHub</a>
+                <span class="badge badge-success">v1.0.0 Active</span>
+            </div>
+        </div>
+    </header>
+
+    <main class="main-container">
+        <div class="hero-section">
+            <h1>Automated Bulk Certificate Generator</h1>
+            <p>Generate, issue, and verify high-quality PDF certificates in bulk with embedded QR verification.</p>
+        </div>
+
+        <div class="dashboard-grid">
+            <!-- Left Card: Request Configuration -->
+            <section class="card form-card">
+                <div class="card-header">
+                    <h2>1. Certificate Details</h2>
+                    <span class="card-subtitle">Configure the course metadata and recipient roster</span>
+                </div>
+
+                <form id="certificate-form">
+                    <div class="form-group">
+                        <label for="course_name">Course / Event Name *</label>
+                        <input type="text" id="course_name" name="course_name" required placeholder="e.g. Advanced Python & Cloud Architecture" value="Advanced Python & Cloud Architecture">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="issue_date">Issue Date *</label>
+                        <input type="text" id="issue_date" name="issue_date" required placeholder="e.g. October 7, 2026" value="October 7, 2026">
+                    </div>
+
+                    <div class="input-mode-tabs">
+                        <button type="button" class="tab-btn active" id="tab-manual" onclick="switchInputMode('manual')">Manual Entry</button>
+                        <button type="button" class="tab-btn" id="tab-csv" onclick="switchInputMode('csv')">CSV Import</button>
+                    </div>
+
+                    <!-- Manual Recipient Table -->
+                    <div id="manual-recipients-section">
+                        <div class="table-header-row">
+                            <label>Recipients List (<span id="recipient-count">3</span>)</label>
+                            <button type="button" class="btn btn-secondary btn-sm" onclick="addRecipientRow()">+ Add Recipient</button>
+                        </div>
+                        <div class="recipients-table-container">
+                            <table class="recipients-table" id="recipients-table">
+                                <thead>
+                                    <tr>
+                                        <th>Full Name *</th>
+                                        <th>Email (Optional)</th>
+                                        <th style="width: 40px;"></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="recipients-tbody">
+                                    <tr>
+                                        <td><input type="text" class="input-name" placeholder="John Doe" value="Alice Johnson" required></td>
+                                        <td><input type="email" class="input-email" placeholder="alice@example.com" value="alice@example.com"></td>
+                                        <td><button type="button" class="btn-icon delete-btn" onclick="removeRecipientRow(this)">✕</button></td>
+                                    </tr>
+                                    <tr>
+                                        <td><input type="text" class="input-name" placeholder="John Doe" value="Bob Smith" required></td>
+                                        <td><input type="email" class="input-email" placeholder="bob@example.com" value="bob@example.com"></td>
+                                        <td><button type="button" class="btn-icon delete-btn" onclick="removeRecipientRow(this)">✕</button></td>
+                                    </tr>
+                                    <tr>
+                                        <td><input type="text" class="input-name" placeholder="John Doe" value="Charlie Brown" required></td>
+                                        <td><input type="email" class="input-email" placeholder="charlie@example.com" value="charlie@example.com"></td>
+                                        <td><button type="button" class="btn-icon delete-btn" onclick="removeRecipientRow(this)">✕</button></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- CSV Upload Section -->
+                    <div id="csv-upload-section" class="hidden">
+                        <div class="drop-zone" id="drop-zone">
+                            <span class="drop-icon">📁</span>
+                            <p><strong>Click to upload</strong> or drag and drop a CSV file</p>
+                            <span class="drop-hint">Format: name,email (Header optional)</span>
+                            <input type="file" id="csv-file-input" accept=".csv" class="hidden">
+                        </div>
+                        <div id="csv-preview-info" class="csv-preview-box hidden">
+                            <span id="csv-filename">file.csv</span>
+                            <span id="csv-rows-count" class="badge badge-info">0 recipients parsed</span>
+                        </div>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" id="submit-btn" class="btn btn-primary btn-block">
+                            <span id="submit-text">🚀 Generate Bulk Certificates</span>
+                            <span id="submit-spinner" class="spinner hidden"></span>
+                        </button>
+                    </div>
+                </form>
+            </section>
+
+            <!-- Right Card: Job Status & Progress Tracker -->
+            <section class="card status-card">
+                <div class="card-header">
+                    <h2>2. Generation Monitor</h2>
+                    <span class="card-subtitle">Real-time background status and batch download</span>
+                </div>
+
+                <div id="empty-state" class="empty-state">
+                    <span class="empty-icon">⏳</span>
+                    <h3>No Active Job</h3>
+                    <p>Submit the form on the left to initiate asynchronous certificate generation.</p>
+                </div>
+
+                <div id="job-details-container" class="hidden">
+                    <div class="job-meta-header">
+                        <div>
+                            <span class="meta-label">Job ID:</span>
+                            <code id="job-id-display">--</code>
+                        </div>
+                        <div>
+                            <span id="job-status-badge" class="badge badge-pending">PENDING</span>
+                        </div>
+                    </div>
+
+                    <!-- Progress Bar -->
+                    <div class="progress-wrapper">
+                        <div class="progress-labels">
+                            <span id="progress-text">Progress: 0%</span>
+                            <span id="processed-count-text">0 / 0</span>
+                        </div>
+                        <div class="progress-bar-bg">
+                            <div class="progress-bar-fill" id="progress-fill" style="width: 0%;"></div>
+                        </div>
+                    </div>
+
+                    <!-- Metrics Grid -->
+                    <div class="stats-grid">
+                        <div class="stat-box">
+                            <span class="stat-num" id="stat-total">0</span>
+                            <span class="stat-label">Total</span>
+                        </div>
+                        <div class="stat-box stat-success">
+                            <span class="stat-num" id="stat-completed">0</span>
+                            <span class="stat-label">Success</span>
+                        </div>
+                        <div class="stat-box stat-failed">
+                            <span class="stat-num" id="stat-failed">0</span>
+                            <span class="stat-label">Failed</span>
+                        </div>
+                        <div class="stat-box">
+                            <span class="stat-num" id="stat-pending">0</span>
+                            <span class="stat-label">Pending</span>
+                        </div>
+                    </div>
+
+                    <!-- Batch Download Action -->
+                    <div class="batch-actions">
+                        <a id="download-zip-btn" href="#" class="btn btn-success btn-block disabled">
+                            📦 Download All Certificates (ZIP)
+                        </a>
+                    </div>
+
+                    <!-- Itemized Results Table -->
+                    <div class="results-header">
+                        <h3>Recipient Breakdown</h3>
+                    </div>
+                    <div class="results-table-container">
+                        <table class="results-table">
+                            <thead>
+                                <tr>
+                                    <th>Recipient</th>
+                                    <th>Certificate ID</th>
+                                    <th>Status</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="results-tbody">
+                                <!-- Populated dynamically by app.js -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <p>CertiFlow — Bulk Certificate Generator Backend Service</p>
+    </footer>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>

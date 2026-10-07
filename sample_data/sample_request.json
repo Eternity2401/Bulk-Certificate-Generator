@@ -1,0 +1,26 @@
+{
+  "course_name": "Full Stack & Distributed Systems Engineering",
+  "issue_date": "October 7, 2026",
+  "recipients": [
+    {
+      "name": "Sarah Connor",
+      "email": "sarah.connor@example.com"
+    },
+    {
+      "name": "John Connor",
+      "email": "john.connor@example.com"
+    },
+    {
+      "name": "Kyle Reese",
+      "email": "kyle.reese@example.com"
+    },
+    {
+      "name": "Miles Dyson",
+      "email": "miles.dyson@example.com"
+    },
+    {
+      "name": "T-800 Cyberdyne",
+      "email": "t800@example.com"
+    }
+  ]
+}

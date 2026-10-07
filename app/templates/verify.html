@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Certificate Verification — Official Portal</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+</head>
+<body class="verify-page-body">
+    <div class="verify-card-container">
+        <div class="verify-card">
+            <div class="verify-header">
+                <span class="verify-icon">📜</span>
+                <h2>Official Certificate Verification</h2>
+                <p>Authenticity and integrity validation portal</p>
+            </div>
+
+            {% if is_valid %}
+            <div class="status-banner valid">
+                <span class="banner-icon">✓</span>
+                <div>
+                    <strong>AUTHENTIC & VERIFIED</strong>
+                    <p>This certificate record is officially registered in our database.</p>
+                </div>
+            </div>
+
+            <div class="verify-details">
+                <div class="detail-row">
+                    <span class="detail-label">Certificate ID:</span>
+                    <span class="detail-value font-mono"><strong>{{ certificate_id }}</strong></span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Recipient Name:</span>
+                    <span class="detail-value"><strong>{{ recipient_name }}</strong></span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Course / Event:</span>
+                    <span class="detail-value">{{ course_name }}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Issue Date:</span>
+                    <span class="detail-value">{{ issue_date }}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Registered At:</span>
+                    <span class="detail-value">{{ issued_at }}</span>
+                </div>
+            </div>
+
+            <div class="verify-actions">
+                <a href="{{ download_url }}" class="btn btn-primary btn-block">
+                    📥 Download Official Certificate (PDF)
+                </a>
+                <a href="/" class="btn btn-secondary btn-block">
+                    ← Back to Generator Dashboard
+                </a>
+            </div>
+
+            {% else %}
+            <div class="status-banner invalid">
+                <span class="banner-icon">✕</span>
+                <div>
+                    <strong>UNVERIFIED OR INVALID</strong>
+                    <p>{{ message }}</p>
+                </div>
+            </div>
+
+            <div class="verify-details">
+                <div class="detail-row">
+                    <span class="detail-label">Certificate ID:</span>
+                    <span class="detail-value font-mono">{{ certificate_id }}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Status:</span>
+                    <span class="detail-value text-danger">Record Not Found / Incomplete</span>
+                </div>
+            </div>
+
+            <div class="verify-actions">
+                <a href="/" class="btn btn-secondary btn-block">
+                    ← Back to Dashboard
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</body>
+</html>
